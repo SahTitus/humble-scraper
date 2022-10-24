@@ -1,13 +1,15 @@
 import mongoose from "mongoose";
 
 const articleSchema = mongoose.Schema({
-  category: String,
-  sub_category: String,
-  title: String,
   link: String,
+  title: String,
   image: String,
   source: String,
+  category: String,
+  mini_card: Boolean,
+  translate: Boolean,
   source_img: String,
+  category_id: String,
 });
 
 export default mongoose.model("Article", articleSchema);

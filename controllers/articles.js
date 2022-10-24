@@ -4,6 +4,11 @@ import Article from "../model/article.js";
 import Topic from "../model/topic.js";
 import CondArticle from "../model/condArticle.js";
 
+//Healthline
+//Mindbodygreen
+//MedicalNewsToday
+//NHS
+
 export const scraper = async (req, res) => {
   const {
     mnt,
@@ -24,12 +29,13 @@ export const scraper = async (req, res) => {
 
   const articles = [];
 
+ 
   // MedicalNewsToday
   if (mnt) {
     // Client side keys
 
     terms.map((term) => {
-      axios(`https://www.medicalnewstoday.com/${term}`)
+      axios(`https://www.medicalnewstoday.com/${!isTopics ? term?.cate_key: ''}`)
         .then((response) => {
           const html = response.data;
           const $ = cheerio.load(html);
@@ -40,11 +46,12 @@ export const scraper = async (req, res) => {
               const title = $(el).text().trim();
               const link = $(el).find("a").attr("href");
               const image = $(el).find("span lazy-image").attr("src");
+       
 
               return {
                 title,
                 link: "https://www.medicalnewstoday.com" + link,
-                image,
+                image: "https:" + image
               };
             })
             .get();
@@ -54,8 +61,6 @@ export const scraper = async (req, res) => {
               await CondArticle.create({
                 ...contents,
                 condition,
-                category: "health",
-                sub_category: term,
                 source: "MedicalNewsToday",
                 source_img:
                   "https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1413780870/nu5ilpby3btq45pghneg.png",
@@ -70,8 +75,9 @@ export const scraper = async (req, res) => {
             data.map(async (article) => {
               const result = await Article.create({
                 ...article,
-                category: "health",
-                sub_category: term,
+                category: term.cate,
+                category_id: term.cate_id,
+                mini_card: true,
                 source: "MedicalNewsToday",
                 source_img:
                   "https://res.cloudinary.com/crunchbase-production/image/upload/c_lpad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1413780870/nu5ilpby3btq45pghneg.png",
@@ -92,7 +98,7 @@ export const scraper = async (req, res) => {
 
   if (healthline) {
     terms.map((term) => {
-      axios(`https://www.healthline.com/directory/${term}`)
+      axios(`https://www.healthline.com/directory/${!isTopics ? term?.cate_key: ''}`)
         .then((response) => {
           const html = response.data;
           const $ = cheerio.load(html);
@@ -121,6 +127,8 @@ export const scraper = async (req, res) => {
                 createdAt: new Date().toISOString(),
               });
             });
+
+            console.log(topics);
           }
 
           //HUMAN BODY PARTS HAS THE SAME SELECTORS AS NUTRITION
@@ -133,11 +141,12 @@ export const scraper = async (req, res) => {
               const image = $(el).find(".css-rlaxw5 lazy-image ").attr("src");
 
               articles.push({
-                category: "health",
-                sub_category: term,
+                category: term.cate,
+                category_id: term.cate_id,
                 title,
                 link,
-                image,
+                mini_card: true,
+                image: "https:" + image,
                 source: "Healthline",
                 source_img:
                   "https://cdn.comparably.com/26017579/l/128313_logo_healthline-media.png",
@@ -178,7 +187,7 @@ export const scraper = async (req, res) => {
                 const link = $(el).find("a").attr("href");
                 topics.push({
                   title: condition,
-                  link: `${nhsUrl}/` + link,
+                  link: `https://www.nhs.uk` + link,
                   source: "NHS",
                   source_img:
                     "https://peopleshistorynhs.org/wp-content/uploads/2016/01/nhs-logo-880x4951.jpeg",
@@ -199,38 +208,6 @@ export const scraper = async (req, res) => {
       .catch((error) => console.log(error));
   }
 
-  // A-Z NHS health conditions
-  // if (nhs) {
-  //   const nhsUrl = "https://www.nhs.uk/conditions";
-  //   axios(nhsUrl)
-  //     .then((response) => {
-  //       const html = response.data;
-  //       const $ = cheerio.load(html);
-  //       const topics = [];
-
-  //       $(".nhsuk-list.nhsuk-list--border", html)
-  //         .each((i, el) => {
-  //           $(el)
-  //             .find("li")
-  //             .each((i, el) => {
-  //               const conditions = $(el).text().trim();
-  //               const link = $(el).find("a").attr("href");
-  //               topics.push({
-  //                 conditions,
-  //                 link: `${nhsUrl}/` + link,
-  //                 source: "https://www.nhs.uk",
-  //                 source_img:
-  //                   "https://peopleshistorynhs.org/wp-content/uploads/2016/01/nhs-logo-880x4951.jpeg",
-  //               });
-  //             });
-  //         })
-  //         .get();
-
-  //       // console.log(topics);
-  //     })
-  //     .catch((error) => console.log(error));
-  // }
-
   // Mindbodygreen
   //Cant scrape sleep page
 
@@ -238,7 +215,7 @@ export const scraper = async (req, res) => {
     //   const mbg_page = 'page/1'
     const page = `/page/${mbg_pageNum}`;
     terms.map((term) => {
-      const url = `https://www.mindbodygreen.com/${term}${
+      const url = `https://www.mindbodygreen.com/${!isTopics ? term?.cate_key: ''}${
         isMbg_page ? page : ""
       }`;
       axios(url)
@@ -263,8 +240,8 @@ export const scraper = async (req, res) => {
                 const image = url?.slice(0, -1);
 
                 articles.push({
-                  sub_category: term,
-                  category: "health",
+                  category_id: term.cate_id,
+                  category: term.cate,
                   title,
                   image,
                   link: "https://www.mindbodygreen.com" + link,
@@ -284,8 +261,8 @@ export const scraper = async (req, res) => {
                 const title = $(el).text().trim();
                 const link = $(el).find("a").attr("href");
                 articles.push({
-                  sub_category: term,
-                  category: "health",
+                  category_id: term.cate_idgory_id,
+                  category: term.cate,
                   title,
                   link: "https://www.mindbodygreen.com" + link,
                   source: "Mindbodygreen",
